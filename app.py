@@ -17,7 +17,7 @@ def summarize_text(url,model, tokenizer):
     max_length = 1024
     truncated_input = text[:max_length]
 
-    #print(truncated_input)
+    
     # Transform input tokens 
     inputs = tokenizer.encode(truncated_input, return_tensors="pt")
 
