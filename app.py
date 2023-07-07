@@ -1,15 +1,8 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
-from transformers import BertModel, BertTokenizer
-from transformers import pipeline
 import requests
 from bs4 import BeautifulSoup
-import re
-from transformers import AutoModel, AutoTokenizer 
-import torch
+from transformers import BartTokenizer, BartForConditionalGeneration
+
 
 def summarize_text(url,model, tokenizer):
     # facebook/bart-large-xsum
@@ -20,25 +13,28 @@ def summarize_text(url,model, tokenizer):
     # Create a BeautifulSoup object to parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     text = soup.text
-    
-    
+    #transformed_text = re.sub(r'[^ ]', r'\\', text)
+    max_length = 1024
+    truncated_input = text[:max_length]
 
-
+    #print(truncated_input)
     # Transform input tokens 
-    inputs = tokenizer(text=text, return_tensors="pt")
+    inputs = tokenizer.encode(truncated_input, return_tensors="pt")
 
-    # Model apply
-    outputs = model(**inputs)
+    # Generate summary
+    summary_ids = model.generate(inputs, num_beams=4, max_length=1024, early_stopping=True)
 
-    return outputs
+    # Convert summary IDs to text
+    summary_text = tokenizer.decode(summary_ids.squeeze(), skip_special_tokens=True)
+
+    return summary_text
 
 # Streamlit app
 def main():
-    # Define the model repo
     model_name = "facebook/bart-large-xsum" 
     # Download pytorch model
-    model = AutoModel.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = BartTokenizer.from_pretrained(model_name)
+    model = BartForConditionalGeneration.from_pretrained(model_name)
 
     st.title("Webpage Text Summarizer")
     st.write("Enter a URL and get a summary of the webpage text.")
