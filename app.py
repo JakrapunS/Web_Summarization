@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from transformers import BartTokenizer, BartForConditionalGeneration
 
-
+# sum
 def summarize_text(url,model, tokenizer):
     # facebook/bart-large-xsum
     
