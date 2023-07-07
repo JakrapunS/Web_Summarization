@@ -8,40 +8,45 @@ from transformers import pipeline
 import requests
 from bs4 import BeautifulSoup
 import re
-from transformers import BertTokenizerFast, EncoderDecoderModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer 
 import torch
 
-def summarize_text(url,sentense_fuser, tokenizer):
+def summarize_text(url,model, tokenizer):
+    # facebook/bart-large-xsum
     
+    # https://arxiv.org/abs/1910.13461
     url = url
     response = requests.get(url)
     # Create a BeautifulSoup object to parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     text = soup.text
-    sentence_fuser = sentense_fuser
-    tokenizer = tokenizer
-
-    input_ids = tokenizer(
-        text, add_special_tokens=False, return_tensors="pt"
-    ).input_ids
-
-    outputs = sentence_fuser.generate(input_ids)
-
-    return tokenizer.decode(outputs[0])
     
+    
+
+
+    # Transform input tokens 
+    inputs = tokenizer(text=text, return_tensors="pt")
+
+    # Model apply
+    outputs = model(**inputs)
+
+    return outputs
 
 # Streamlit app
 def main():
-    st.title("Webpage Text Summarizer")
+    # Define the model repo
+    model_name = "facebook/bart-large-xsum" 
+    # Download pytorch model
+    model = AutoModel.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
+    st.title("Webpage Text Summarizer")
     st.write("Enter a URL and get a summary of the webpage text.")
-    sentence_fuser = EncoderDecoderModel.from_pretrained("google/roberta2roberta_L-24_discofuse")
-    tokenizer = AutoTokenizer.from_pretrained("google/roberta2roberta_L-24_discofuse")
     # Input URL
     url = st.text_input("Enter URL:")
     if url:
         try:
-            summary = summarize_text(url,sentence_fuser,tokenizer)
+            summary = summarize_text(url,model,tokenizer)
             st.subheader("Summary:")
             st.write(summary)
         except:
