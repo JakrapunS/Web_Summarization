@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from transformers import BartTokenizer, BartForConditionalGeneration
 
-# sum
+
 def summarize_text(url,model, tokenizer):
     # facebook/bart-large-xsum
     
@@ -13,7 +13,7 @@ def summarize_text(url,model, tokenizer):
     # Create a BeautifulSoup object to parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     text = soup.text
-    #transformed_text = re.sub(r'[^ ]', r'\\', text)
+    
     max_length = 1024
     truncated_input = text[:max_length]
 
