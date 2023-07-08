@@ -13,24 +13,57 @@ def summarize_text(url,model, tokenizer):
     # Create a BeautifulSoup object to parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     text = soup.text
-    
+    #transformed_text = re.sub(r'[^ ]', r'\\', text)
     max_length = 1024
-    truncated_input = text[:max_length]
 
-    
+    text_len = len(text)
+
+    n = round(text_len/max_length)
+    # Create text chunk
+    chunk=[]
+    for i in range(n):
+        start = (i*max_length)
+        end = (i+1)*max_length
+        if end > text_len:
+            end = text_len
+            
+        chunk.append(text[start:end])
+
+    #print(truncated_input)
     # Transform input tokens 
-    inputs = tokenizer.encode(truncated_input, return_tensors="pt")
+
+    result_text = []
+    for text in chunk:
+        inputs = tokenizer.encode(text, return_tensors="pt")
+
+        # Generate summary
+        summary_ids = model.generate(inputs, num_beams=4, max_length=1024, early_stopping=True)
+
+        # Convert summary IDs to text
+        summary_text = tokenizer.decode(summary_ids.squeeze(), skip_special_tokens=True)
+
+        result_text.append(summary_text)
+
+    concatenated_text = ' '.join(result_text)
+
+    if len(concatenated_text)  > max_length:
+        final = concatenated_text[:max_length]
+    else:
+        final =concatenated_text
+    
+    #final summarization
+    #inputs_final = tokenizer.encode(final, return_tensors="pt")
 
     # Generate summary
-    summary_ids = model.generate(inputs, num_beams=4, max_length=1024, early_stopping=True)
+    #summary_ids_final = model.generate(inputs_final, num_beams=4, max_length=1024, early_stopping=True)
 
     # Convert summary IDs to text
-    summary_text = tokenizer.decode(summary_ids.squeeze(), skip_special_tokens=True)
+    #summary_text_final = tokenizer.decode(summary_ids_final.squeeze(), skip_special_tokens=True)
 
-    return summary_text
+    return concatenated_text
 
 #add cathc load model
-@st.cache
+
 def load_model():
     model_name = "facebook/bart-large-xsum" 
     # Download pytorch model
