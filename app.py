@@ -30,11 +30,11 @@ def load_model():
     )
     params = {
         "max_length": 1024,
-        "min_length": 56,
+        "min_length": 8,
         "no_repeat_ngram_size": 3,
         "early_stopping": True,
         "repetition_penalty": 3.5,
-        "length_penalty": 0.3,
+        "length_penalty": 0.5,
         "encoder_no_repeat_ngram_size": 3,
         "num_beams": 4,
     } # parameters for text generation out of model
