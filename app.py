@@ -34,7 +34,7 @@ def load_model():
         "no_repeat_ngram_size": 3,
         "early_stopping": True,
         "repetition_penalty": 3.5,
-        "length_penalty": 0.5,
+        "length_penalty": 0.1,
         "encoder_no_repeat_ngram_size": 3,
         "num_beams": 4,
     } # parameters for text generation out of model
@@ -47,6 +47,9 @@ def main():
 
     st.title("Webpage Text Summarizer")
     st.write("Enter a URL and get a summary of the webpage text.")
+
+    example_url = "https://www.abc.net.au/news/2023-07-11/crown-resorts-450-million-fine-money-laundering/102588950"
+    st.markdown(f"For instance, you can copy the following example URL:<br>[`{example_url}`]({example_url})", unsafe_allow_html=True)
     # Input URL
     url = st.text_input("Enter URL:")
     if url:
