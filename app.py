@@ -1,11 +1,20 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from transformers import BartTokenizer, BartForConditionalGeneration
+#from transformers import BartTokenizer, BartForConditionalGeneration
+from transformers import pipeline
+import torch
 
 
-def summarize_text(url,model, tokenizer):
-    # facebook/bart-large-xsum
+def answer_question(qa_pipeline, question, context):
+
+    
+    res = qa_pipeline(question,context)
+    return res['answer']
+
+
+def summarize_text(url,summarizer, params):
+    # LongT5
     
     # https://arxiv.org/abs/1910.13461
     url = url
@@ -13,77 +22,71 @@ def summarize_text(url,model, tokenizer):
     # Create a BeautifulSoup object to parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     text = soup.text
-    #transformed_text = re.sub(r'[^ ]', r'\\', text)
-    max_length = 1024
 
-    text_len = len(text)
+    result = summarizer(text, **params)
+    print(result[0].keys())
 
-    n = round(text_len/max_length)
-    # Create text chunk
-    chunk=[]
-    for i in range(n):
-        start = (i*max_length)
-        end = (i+1)*max_length
-        if end > text_len:
-            end = text_len
-            
-        chunk.append(text[start:end])
+    return result[0]['summary_text'],text
 
-    #print(truncated_input)
-    # Transform input tokens 
 
-    result_text = []
-    for text in chunk:
-        inputs = tokenizer.encode(text, return_tensors="pt")
+def load_models():
+    summarizer = pipeline(
+        "summarization",
+        "pszemraj/long-t5-tglobal-base-16384-book-summary",
+        device=0 if torch.cuda.is_available() else -1,
+    )
 
-        # Generate summary
-        summary_ids = model.generate(inputs, num_beams=4, max_length=1024, early_stopping=True)
 
-        # Convert summary IDs to text
-        summary_text = tokenizer.decode(summary_ids.squeeze(), skip_special_tokens=True)
+    #https://arxiv.org/abs/1910.01108
+    qa_pipeline = pipeline(
+        'question-answering',
+        "deepset/roberta-base-squad2",
+        device=0 if torch.cuda.is_available() else -1,
+        )
 
-        result_text.append(summary_text)
+    params = {
+        "max_length": 1024,
+        "min_length": 8,
+        "no_repeat_ngram_size": 3,
+        "early_stopping": True,
+        "repetition_penalty": 3.5,
+        "length_penalty": 0.1,
+        "encoder_no_repeat_ngram_size": 3,
+        "num_beams": 4,
+    } # parameters for text generation out of model
+    return summarizer,params,qa_pipeline
 
-    concatenated_text = ' '.join(result_text)
-
-    if len(concatenated_text)  > max_length:
-        final = concatenated_text[:max_length]
-    else:
-        final =concatenated_text
-    
-    #final summarization
-    #inputs_final = tokenizer.encode(final, return_tensors="pt")
-
-    # Generate summary
-    #summary_ids_final = model.generate(inputs_final, num_beams=4, max_length=1024, early_stopping=True)
-
-    # Convert summary IDs to text
-    #summary_text_final = tokenizer.decode(summary_ids_final.squeeze(), skip_special_tokens=True)
-
-    return concatenated_text
-
-#add cathc load model
-
-def load_model():
-    model_name = "facebook/bart-large-xsum" 
-    # Download pytorch model
-    tokenizer = BartTokenizer.from_pretrained(model_name)
-    model = BartForConditionalGeneration.from_pretrained(model_name)
-    return model,tokenizer
 
 # Streamlit app
 def main():
-    model,tokenizer = load_model()
+    summarizer, summarizer_params, qa_pipeline = load_models()
 
-    st.title("Webpage Text Summarizer")
-    st.write("Enter a URL and get a summary of the webpage text.")
+    st.title("Webpage Text Summarizer and Question Answering")
+    st.write("Enter a URL and get a summary of the webpage text. You can also ask questions about the content.")
+
+    example_url = "https://www.abc.net.au/news/2023-07-11/crown-resorts-450-million-fine-money-laundering/102588950"
+    st.markdown(
+        f"For instance, you can copy the following example URL:<br>[`{example_url}`]({example_url})",
+        unsafe_allow_html=True
+    )
+
     # Input URL
     url = st.text_input("Enter URL:")
     if url:
         try:
-            summary = summarize_text(url,model,tokenizer)
+            summary,text = summarize_text(url, summarizer, summarizer_params)
             st.subheader("Summary:")
             st.write(summary)
+
+            # Allow user to ask questions
+            st.subheader("Question Answering:")
+            question = st.text_input("Ask a question:")
+            if question:
+                try:
+                    answer = answer_question(qa_pipeline, question, text)
+                    st.write("Answer:", answer)
+                except:
+                    st.write("Error: Failed to answer the question.")
         except:
             st.write("Error: Failed to summarize the text. Please check the URL or try again later.")
 
