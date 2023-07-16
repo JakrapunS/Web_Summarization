@@ -38,6 +38,7 @@ def load_models():
 
 
     #https://arxiv.org/abs/1910.01108
+    #roberta
     qa_pipeline = pipeline(
         'question-answering',
         "deepset/roberta-base-squad2",
